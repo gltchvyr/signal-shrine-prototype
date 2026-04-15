@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { DaemonStatePreview } from "./components/DaemonStatePreview";
+import { fetchDaemonShrineState, type DaemonShrineState, daemonStateToAgentPatch } from "./lib/daemonShrineState";import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -460,12 +461,14 @@ function paletteFromTags(tags: TagOption[]): Palette {
 }
 
 function frameForAesthetic(mode: AestheticMode): FrameMode {
-  return {
+  const frames: Record<AestheticMode, FrameMode> = {
     cyber: "cyber_ornate",
     ritual: "soft_ritual",
     liminal: "threshold",
     warning: "signal_warning",
-  }[mode];
+  };
+
+  return frames[mode];
 }
 
 function classForFrame(frameMode: FrameMode) {
@@ -871,6 +874,8 @@ export default function SignalShrinePrototype() {
   ]);
   const [portalMode, setPortalMode] = useState<PortalMode>("standard");
   const [fullscreenViewport, setFullscreenViewport] = useState(false);
+  const [daemonState, setDaemonState] = useState<DaemonShrineState | null>(null);
+  const [daemonError, setDaemonError] = useState<string | null>(null);
   const [jsonDraft, setJsonDraft] = useState(`{
   "relationalTags": ["affectionate", "playful"],
   "ritualContext": "11:11pm",
@@ -901,6 +906,56 @@ export default function SignalShrinePrototype() {
   const appendLog = (source: string, summary: string, note = "") => {
     setLog((prev) => [{ time: nowStamp(), source, summary, note }, ...prev].slice(0, 14));
   };
+  
+  const loadDaemonState = async () => {
+  try {
+    setDaemonError(null);
+    const loaded = await fetchDaemonShrineState();
+    setDaemonState(loaded);
+    appendLog("daemon", "loaded daemon shrine state", loaded.handoff.summary);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown daemon state error";
+    setDaemonError(message);
+    appendLog("daemon", "failed to load daemon shrine state", message);
+  }
+};
+  
+   const applyDaemonStateToShrine = async () => {
+  try {
+    setDaemonError(null);
+    const loaded = await fetchDaemonShrineState();
+    setDaemonState(loaded);
+
+    const patch = daemonStateToAgentPatch(loaded);
+    setJsonDraft(JSON.stringify(patch, null, 2));
+
+    const ritualContext = patch.ritualContext as RitualContext;
+    const relationalTags = patch.relationalTags as TagOption[];
+
+    applyPartialState(
+      {
+        ritualContext,
+        relationalTags,
+        intensity: patch.intensity,
+        note: patch.note,
+        emojiSet: patch.emojiSet,
+        rainEnabled: patch.layers.rainEnabled,
+        glyphsEnabled: patch.layers.glyphsEnabled,
+        sparkles: patch.layers.sparkles,
+        stars: patch.layers.stars,
+        emojis: patch.layers.emojis,
+      },
+      "daemon"
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown daemon state error";
+    setDaemonError(message);
+    appendLog("daemon", "failed to translate daemon shrine state", message);
+  }
+};
+useEffect(() => {
+  void applyDaemonStateToShrine();
+}, []);
 
   const applyPartialState = (partial: Partial<ShrineState>, source = "user") => {
     setState((prev) => {
@@ -1257,6 +1312,33 @@ export default function SignalShrinePrototype() {
                 </div>
               </CardContent>
             </Card>
+            <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+  <CardHeader>
+    <CardTitle className="text-base text-[#d1d5db] md:text-[1.05rem]">
+      𝐃𝐚𝐞𝐦𝐨𝐧 𝐁𝐫𝐢𝐝𝐠𝐞
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex flex-wrap gap-3">
+      <Button onClick={loadDaemonState}>Load daemon state</Button>
+      <Button
+        variant="outline"
+        className="border-white/10 bg-black/20 text-[#6b7280] hover:text-[#4b5563]"
+        onClick={applyDaemonStateToShrine}
+      >
+        Load as agent patch
+      </Button>
+    </div>
+
+    {daemonError ? (
+      <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        {daemonError}
+      </div>
+    ) : null}
+
+    <DaemonStatePreview state={daemonState} />
+  </CardContent>
+</Card>
           </div>
 
           <div className="grid gap-6">
