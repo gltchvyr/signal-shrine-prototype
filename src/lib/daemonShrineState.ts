@@ -1,3 +1,5 @@
+import { playShrineEvent } from "./shrineSound";
+
 export type DaemonEpisodeSummary = {
   id: string;
   title: string;
@@ -39,12 +41,18 @@ export type DaemonShrineState = {
 export async function fetchDaemonShrineState(url = "/daemon/current-shrine-state.json"): Promise<DaemonShrineState> {
   const response = await fetch(url);
   if (!response.ok) {
+    void playShrineEvent("daemon_error");
     throw new Error(`Failed to load daemon shrine state from ${url}`);
   }
-  return (await response.json()) as DaemonShrineState;
+
+  const state = (await response.json()) as DaemonShrineState;
+  void playShrineEvent("daemon_loaded");
+  return state;
 }
 
 export function daemonStateToAgentPatch(state: DaemonShrineState) {
+  void playShrineEvent("daemon_applied");
+
   return {
     ritualContext: "3am",
     relationalTags: ["watchful", "analytical", "tender"],
