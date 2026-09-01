@@ -1,5 +1,6 @@
 import { DaemonStatePreview } from "./components/DaemonStatePreview";
-import { fetchDaemonShrineState, type DaemonShrineState, daemonStateToAgentPatch } from "./lib/daemonShrineState";import React, { useEffect, useMemo, useRef, useState } from "react";
+import { fetchDaemonShrineState, type DaemonShrineState, daemonStateToAgentPatch } from "./lib/daemonShrineState";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -912,7 +913,7 @@ export default function SignalShrinePrototype() {
     setDaemonError(null);
     const loaded = await fetchDaemonShrineState();
     setDaemonState(loaded);
-    appendLog("daemon", "loaded daemon shrine state", loaded.handoff.summary);
+    appendLog("daemon", loaded.applyAllowed ? "loaded current daemon projection" : "loaded daemon refusal", loaded.handoff.summary);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown daemon state error";
     setDaemonError(message);
