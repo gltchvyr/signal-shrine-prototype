@@ -19,19 +19,19 @@ A stateful ambient display for relational tone expressed as aesthetic state.
 
 ## Daemon bridge
 
-Signal Shrine can ingest daemon-generated shrine state from:
-
-`public/daemon/current-shrine-state.json`
+Signal Shrine looks first for the ignored local file `public/daemon/current-shrine-state.local.json`, then falls back to a committed unbound refusal fixture.
 
 This state can be:
 
 - previewed directly in the UI
 - translated into the shrine’s agent patch format
-- auto-applied on startup to drive shrine visuals
+- auto-applied on startup only after runtime validation and currency checks
 
 Current bridge flow:
 
-`daemon-vessel` → `current-shrine-state.json` → Signal Shrine fetch → preview / translation / visual application
+`canonical state` → `daemon-vessel` validation and bounded projection → Signal Shrine runtime validation → preview / refusal-aware visual application
+
+Only a Shrine Projection v1 object with valid integrity, matched currency, an exact revision and digest receipt, and `applyAllowed: true` can alter the visual state. A stale or invalid object remains visible as evidence but cannot become weather.
 
 ## Notes
 
